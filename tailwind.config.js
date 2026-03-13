@@ -7,6 +7,9 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   presets: [require("nativewind/preset")],
+  corePlugins: {
+    preflight: false,
+  },
   theme: {
     extend: {},
   },
