@@ -27,7 +27,7 @@ import { LoginFormType, loginSchema } from "./schema";
 WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
-  const setToken = useAuthStore((state) => state.setToken);
+  const { setToken, setUser } = useAuthStore.getState();
   const { mutate, isPending } = useLoginMutation();
   const { mutate: googleLoginMutate } = useGoogleLoginMutation();
   const router = useRouter();
@@ -41,6 +41,7 @@ const LoginScreen = () => {
         onSuccess: async (data) => {
           await saveTokens(data.accessToken, data.refreshToken, data.user);
           setToken(data.accessToken);
+          setUser(data.user.id, data.user.username);
         },
         onError: (error) => {
           showError(error.message);
@@ -67,6 +68,7 @@ const LoginScreen = () => {
     mutate(values, {
       onSuccess: async (data) => {
         await saveTokens(data.accessToken, data.refreshToken, data.user);
+
         if (rememberMe) {
           await AsyncStorage.setItem("remembered_username", values.username);
         } else {
@@ -74,6 +76,7 @@ const LoginScreen = () => {
         }
 
         setToken(data.accessToken);
+        setUser(data.user.id, data.user.username);
       },
       onError: (error) => {
         const field = error.field;

@@ -21,7 +21,7 @@ const menu: MenuItem[] = [
 ];
 
 const ProfileScreen = () => {
-  const setToken = useAuthStore((state) => state.setToken);
+  const { setToken, logout } = useAuthStore.getState();
   const { mutate } = useLogoutMutation();
 
   const handleLogout = async () => {
@@ -36,7 +36,7 @@ const ProfileScreen = () => {
       {
         onSuccess: (data) => {
           setToken("");
-          console.log(data);
+          logout();
         },
         onError: () => {
           setToken("");

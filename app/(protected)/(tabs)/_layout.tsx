@@ -1,16 +1,21 @@
+import AppHeader from "@/components/ui/header/AppHeader";
+import { useAuthStore } from "@/store/auth";
+import { useCartAnimation } from "@/store/cartAnimationContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { View } from "react-native";
 
 const TabsLayout = () => {
+  const username = useAuthStore((s) => s.username);
+  const { cartRef } = useCartAnimation();
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: true,
+        headerShown: true,
+        header: () => <AppHeader username={username as string} />,
         tabBarStyle: {
           backgroundColor: "#fff",
           height: 55,
-
           shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
@@ -47,7 +52,9 @@ const TabsLayout = () => {
         options={{
           tabBarLabel: "Cart",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cart" size={size} color={color} />
+            <View ref={cartRef}>
+              <Ionicons name="cart" size={size} color={color} />
+            </View>
           ),
         }}
       />

@@ -62,8 +62,8 @@ const SpecialOfferCarousel = ({
   };
 
   const renderItem = ({ item }: { item: GetProductsTopRatingResType }) => (
-    <View style={{ width: ITEM_WIDTH }} className="px-12">
-      <View className="bg-white rounded-3xl p-5 flex-row items-center">
+    <View style={{ width: ITEM_WIDTH }}>
+      <View className="ml-4 mr-14 bg-white rounded-3xl p-5 flex-row items-center">
         <View className="flex-1">
           <Text className="text-lg font-bold">{item.title}</Text>
 
@@ -80,11 +80,13 @@ const SpecialOfferCarousel = ({
           </TouchableOpacity>
         </View>
 
-        <Image
-          source={{ uri: item.img }}
-          className="w-24 h-24 rounded-xl"
-          resizeMode="cover"
-        />
+        <View className="w-24 h-24 items-center justify-center">
+          <Image
+            source={{ uri: item.img }}
+            className="w-24 h-24"
+            resizeMode="contain"
+          />
+        </View>
       </View>
     </View>
   );
@@ -106,7 +108,6 @@ const SpecialOfferCarousel = ({
         contentOffset={{ x: ITEM_WIDTH, y: 0 }}
       />
 
-      {/* DOTS */}
       <View className="flex-row justify-center mt-3">
         {data.map((_, i) => {
           const active = index - 1 === i;

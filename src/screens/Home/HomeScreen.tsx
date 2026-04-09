@@ -1,132 +1,250 @@
-import { useGetProductsTopRating } from "@/apis/hooks/product";
-import { IUser } from "@/types/user";
-import { getUser } from "@/utils/tokenStorage";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import { useAddCartMutation } from "@/apis/hooks/cart";
+import { useGetAllCategory, useGetCategoryById } from "@/apis/hooks/category";
 import {
+  useGetAllProducts,
+  useGetProductsTopRating,
+} from "@/apis/hooks/product";
+import DismissKeyboardView from "@/components/DismissKeyBoardView";
+import Loading from "@/components/Loading";
+import { useAuthStore } from "@/store/auth";
+import { useCartAnimation } from "@/store/cartAnimationContext";
+import { ProductType } from "@/types/product";
+import { showError } from "@/utils/toast";
+import { useRouter } from "expo-router";
+import React, { useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  FlatList,
   Image,
-  ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import SearchBox from "./component/SearchBox";
 import SpecialOfferCarousel from "./component/SpecialOfferCarousel";
-
-const pizzas = [
-  {
-    id: 1,
-    name: "Pepperoni Pizza",
-    time: "20min",
-    rating: 4.5,
-    price: "$10.00",
-    image: "https://i.imgur.com/0umadnY.png",
-  },
-  {
-    id: 2,
-    name: "Margherita Pizza",
-    time: "30min",
-    rating: 4.6,
-    price: "$8.00",
-    image: "https://i.imgur.com/l49aYS3.png",
-  },
-];
+import { DEFAULT_CATEGORY } from "./const";
+import { AnimatingItem } from "./type";
 
 const HomeScreen = () => {
-  const [user, setUser] = useState<IUser | null>(null);
+  const userId = useAuthStore((state) => state.userId);
+  const [activeId, setActiveId] = useState<string | null>(DEFAULT_CATEGORY);
+  const itemRefs = useRef<Record<string, View | null>>({});
+  const { cartRef } = useCartAnimation();
+  const [animatingItem, setAnimatingItem] = useState<AnimatingItem | null>(
+    null,
+  );
+  const anim = useRef(new Animated.Value(0)).current;
+  const router = useRouter();
   const { data: dataTopRating } = useGetProductsTopRating();
+  const { data: dataCategories } = useGetAllCategory();
+  const { data: dataProductByCategory } = useGetCategoryById({
+    id: activeId ?? "",
+  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useGetAllProducts();
+  const { mutate: addCartMutation } = useAddCartMutation();
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const data = await getUser();
-      setUser(data);
-    };
+  const categories = [
+    { id: DEFAULT_CATEGORY, name: "All" },
+    ...(dataCategories ?? []),
+  ];
 
-    loadUser();
-  }, []);
+  const handleAddToCart = (item: ProductType) => {
+    const itemRef = itemRefs.current[item.id];
+
+    if (!itemRef || !cartRef.current) return;
+
+    addCartMutation(
+      { productId: item.id, userId: userId as string },
+      {
+        onSuccess: () => {
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              itemRef.measureInWindow((x, y) => {
+                cartRef.current?.measureInWindow((cx, cy) => {
+                  setAnimatingItem({
+                    uri: item.img,
+                    startX: x,
+                    startY: y,
+                    endX: cx,
+                    endY: cy,
+                  });
+                  anim.setValue(0);
+                  Animated.timing(anim, {
+                    toValue: 1,
+                    duration: 700,
+                    useNativeDriver: true,
+                  }).start(() => {
+                    setAnimatingItem(null);
+                  });
+                });
+              });
+            }, 30);
+          });
+        },
+
+        onError: (error) => {
+          showError(error.message);
+        },
+      },
+    );
+  };
+
+  const products = useMemo(() => {
+    if (activeId === DEFAULT_CATEGORY) {
+      return data?.pages.flatMap((page) => page.data) ?? [];
+    }
+
+    return dataProductByCategory?.products ?? [];
+  }, [activeId, data, dataProductByCategory]);
+
   return (
-    <View className="flex-1 bg-gray-100">
-      <ScrollView showsVerticalScrollIndicator={false} className="px-5 pt-14">
-        <View className="flex-row justify-between items-center mb-4">
-          <View>
-            <Text className="text-gray-400 text-sm">Welcome back 👋</Text>
-
-            <View className="flex-row items-center">
-              <Text className="font-semibold text-lg">
-                {user?.username || "Guest"}
-              </Text>
-            </View>
-          </View>
-
-          <View className="bg-white p-2 rounded-full shadow">
-            <Ionicons name="notifications-outline" size={20} />
-          </View>
-        </View>
-
-        <View className="flex-row items-center bg-white rounded-full px-4 py-3 mb-5">
-          <Ionicons name="search" size={18} color="gray" />
-          <TextInput
-            placeholder="Search your favourite pizza"
-            className="ml-2 flex-1"
-          />
-          <Feather name="sliders" size={18} color="gray" />
-        </View>
-
-        <SpecialOfferCarousel data={dataTopRating ?? []} />
-
-        <View className="flex-row justify-between items-center mb-3">
-          <Text className="text-lg font-bold">Popular Pizza</Text>
-          <Text className="text-orange-400">See All</Text>
-        </View>
-
-        {/* Filters */}
-        <View className="flex-row mb-4">
-          <TouchableOpacity className="bg-orange-400 px-4 py-2 rounded-full mr-2">
-            <Text className="text-white">All Pizzas</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity className="bg-gray-200 px-4 py-2 rounded-full mr-2">
-            <Text>Vegetarian</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity className="bg-gray-200 px-4 py-2 rounded-full">
-            <Text>Specials</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Pizza List */}
-        {pizzas.map((pizza) => (
-          <View
-            key={pizza.id}
-            className="bg-white p-4 rounded-2xl flex-row items-center mb-4 shadow"
-          >
-            <Image
-              source={{ uri: pizza.image }}
-              className="w-20 h-20 rounded-full"
-            />
-
-            <View className="flex-1 ml-4">
-              <Text className="font-semibold">{pizza.name}</Text>
-
-              <Text className="text-gray-400 text-sm">
-                Offer valid today only
-              </Text>
-
-              <View className="flex-row items-center mt-1">
-                <Text className="text-gray-400">{pizza.time}</Text>
-                <Text className="ml-3">⭐ {pizza.rating}</Text>
+    <DismissKeyboardView>
+      <View className="flex-1 bg-gray-100">
+        <SearchBox />
+        <FlatList
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          data={products}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 16 }}
+          ListHeaderComponent={
+            <>
+              <SpecialOfferCarousel data={dataTopRating ?? []} />
+              <View className="flex-row justify-between items-center mt-5 mb-3">
+                <Text className="text-lg font-bold">Popular Food</Text>
               </View>
 
-              <Text className="font-bold mt-1">{pizza.price}</Text>
-            </View>
+              <FlatList
+                data={categories}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ paddingBottom: 16 }}
+                renderItem={({ item }) => {
+                  const isActive = activeId === item.id;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => setActiveId(item.id)}
+                      className={`px-4 py-2 rounded-full mr-3 ${
+                        isActive ? "bg-orange-400" : "bg-gray-200"
+                      }`}
+                    >
+                      <Text className={isActive ? "text-white" : "text-black"}>
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </>
+          }
+          renderItem={({ item }) => (
+            <View
+              ref={(ref) => {
+                itemRefs.current[item.id] = ref;
+              }}
+              className="mb-4"
+            >
+              <TouchableOpacity
+                onPress={() => router.push(`/product/${item.id}`)}
+                activeOpacity={0.8}
+              >
+                <View className="bg-white p-4 rounded-2xl flex-row items-center shadow-sm">
+                  <Image
+                    source={{ uri: item.img }}
+                    className="w-20 h-20 rounded-2xl"
+                    resizeMode="cover"
+                  />
 
-            <TouchableOpacity className="bg-black w-8 h-8 rounded-full items-center justify-center">
-              <Text className="text-white text-lg">+</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
+                  <View className="flex-1 ml-4">
+                    <Text className="font-semibold text-base">
+                      {item.title}
+                    </Text>
+                    <Text className="text-gray-400 text-sm mt-1">
+                      {item.desc}
+                    </Text>
+                    <Text className="font-bold mt-2 text-orange-400">
+                      {item.price}đ
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => handleAddToCart(item)}
+                    className="bg-orange-400 w-9 h-9 rounded-full items-center justify-center shadow"
+                  >
+                    <Text className="text-white text-lg">+</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <Loading fullScreen type="spinner" size="small" />
+            ) : null
+          }
+        />
+        {animatingItem && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: animatingItem.startY,
+              left: animatingItem.startX,
+              zIndex: 999,
+            }}
+          >
+            <Animated.Image
+              source={{ uri: animatingItem.uri }}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 12,
+                transform: [
+                  {
+                    translateX: anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [
+                        0,
+                        animatingItem.endX - animatingItem.startX,
+                      ],
+                    }),
+                  },
+                  {
+                    translateY: anim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [
+                        0,
+                        -80,
+                        animatingItem.endY - animatingItem.startY,
+                      ],
+                    }),
+                  },
+                  {
+                    scale: anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 0.3],
+                    }),
+                  },
+                ],
+                opacity: anim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0.7],
+                }),
+              }}
+            />
+          </Animated.View>
+        )}
+      </View>
+    </DismissKeyboardView>
   );
 };
 
