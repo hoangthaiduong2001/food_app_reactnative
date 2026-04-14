@@ -1,10 +1,14 @@
 import {
   useGetOrderDetail,
+  useOrderAgainMutation,
   useUpdateStatusOrderMutation,
 } from "@/apis/hooks/order";
 import ConfirmModal from "@/components/ConfirmModal";
 import Loading from "@/components/Loading";
+import { useAuthStore } from "@/store/auth";
+import { OrderAgainBodyType } from "@/types/order";
 import { capitalize } from "@/utils/format";
+import { showError } from "@/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -14,11 +18,14 @@ const OrderDetailScreen = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [showConfirm, setShowConfirm] = useState(false);
+  const userId = useAuthStore((state) => state.userId);
   const [actionType, setActionType] = useState<"received" | "cancelled" | null>(
     null,
   );
 
   const { mutate: updateStatus, isPending } = useUpdateStatusOrderMutation();
+  const { mutate: orderAgain, isPending: isPendingOrderAgain } =
+    useOrderAgainMutation();
 
   const { data: order, isLoading } = useGetOrderDetail({
     id: id as string,
@@ -45,6 +52,27 @@ const OrderDetailScreen = () => {
         },
       },
     );
+  };
+
+  const handleOrderAgain = () => {
+    if (!order?.data?.products?.length) return;
+
+    const body: OrderAgainBodyType = {
+      userId: userId as string,
+      products: order.data.products.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      })),
+    };
+
+    orderAgain(body, {
+      onSuccess: () => {
+        router.push("/(protected)/(tabs)/cart");
+      },
+      onError: (err) => {
+        showError(err.message);
+      },
+    });
   };
 
   const getStatusStyle = (status: string) => {
@@ -191,6 +219,22 @@ const OrderDetailScreen = () => {
             >
               <Text className="text-red-500 font-semibold text-base">
                 Cancel Order
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {order.data.deliveryStatus === "received" && (
+          <View className="mb-6">
+            <TouchableOpacity
+              onPress={handleOrderAgain}
+              disabled={isPending}
+              className={`py-4 rounded-2xl items-center ${
+                isPending ? "bg-gray-300" : "bg-orange-500"
+              }`}
+            >
+              <Text className="text-white font-semibold text-base">
+                {isPending ? "Adding..." : "Order Again"}
               </Text>
             </TouchableOpacity>
           </View>

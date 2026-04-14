@@ -8,10 +8,11 @@ import {
   UpdateStatusOrderResType,
 } from "@/types/order";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addCartApi } from "../api/cart";
 import {
+  createOrderApi,
   getOrderByUserId,
   getOrderDetail,
+  orderAgainApi,
   updateStatusOrderApi,
 } from "../api/order";
 
@@ -37,17 +38,17 @@ export const useGetOrderDetail = ({ id }: { id: string }) => {
   });
 };
 
-export const useAddCartMutation = () => {
+export const useCreateOrderMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: addCartApi,
+    mutationFn: createOrderApi,
 
     onSuccess: (_, variables) => {
       const userId = variables.userId;
 
       queryClient.invalidateQueries({
-        queryKey: ["cart-id", userId],
+        queryKey: ["create-order", userId],
       });
     },
   });
@@ -60,5 +61,21 @@ export const useUpdateStatusOrderMutation = () => {
     { id: string; body: UpdateStatusOrderBodyType }
   >({
     mutationFn: ({ id, body }) => updateStatusOrderApi(id, body),
+  });
+};
+
+export const useOrderAgainMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: orderAgainApi,
+
+    onSuccess: (_, variables) => {
+      const userId = variables.userId;
+
+      queryClient.invalidateQueries({
+        queryKey: ["order-again", userId],
+      });
+    },
   });
 };

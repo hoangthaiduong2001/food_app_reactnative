@@ -1,4 +1,5 @@
 import ToastProvider from "@/components/Provider/ToastProvider";
+import { useSocket } from "@/hooks/useSocket";
 import { CartAnimationProvider } from "@/store/cartAnimationContext";
 import { NavigationProvider } from "@/store/navigationContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import "../global.css";
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  useSocket();
   return (
     <NavigationProvider>
       <SafeAreaProvider>

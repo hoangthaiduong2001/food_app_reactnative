@@ -41,12 +41,9 @@ export interface GetOrderDetailResType {
   data: IOrderDetail;
 }
 
-export interface UpdateCartResType {
-  message: string;
-}
-
-export interface DeleteCartResType {
-  message: string;
+export interface OrderAgainBodyType {
+  userId: string;
+  products: { productId: string; quantity: number }[];
 }
 
 export interface CreateOrderBodyType {
@@ -64,17 +61,6 @@ export interface UpdateStatusOrderBodyType {
   deliveryStatus: "waiting" | "received" | "cancelled";
 }
 
-export interface UpdateCartBodyType {
-  userId: string;
-  productId: string;
-  quantity: number;
-}
-
-export interface DeleteCartBodyType {
-  userId: string;
-  productId: string;
-}
-
 export interface GetOrderByUserIdErrorType {
   message: string;
 }
@@ -83,11 +69,12 @@ export interface GetOrderDetailErrorType {
   message: string;
 }
 
-export interface AddCartErrorType {
+export interface CreateOrderResType {
   message: string;
+  orderId: string;
 }
 
-export interface CreateOrderResType {
+export interface OrderAgainResType {
   message: string;
 }
 
@@ -103,6 +90,6 @@ export interface UpdateStatusOrderErrorType {
   message: string;
 }
 
-export interface DeleteCartErrorType {
+export interface OrderAgainErrorType {
   message: string;
 }

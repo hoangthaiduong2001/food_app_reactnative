@@ -1,23 +1,39 @@
+import { useCreateOrderMutation } from "@/apis/hooks/order";
 import AddressPicker from "@/components/AddressPicker";
 import { AddressItem } from "@/hooks/useAddressSearch";
+import { useAuthStore } from "@/store/auth";
+import { showError, showSuccess } from "@/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  Image,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SelectedItem } from "../Cart/type";
 
 const PaymentScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const userId = useAuthStore((state) => state.userId);
 
   const selectedItems: SelectedItem[] = params.items
     ? JSON.parse(params.items as string)
     : [];
 
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "wallet">("cod");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedAddress, setSelectedAddress] = useState<AddressItem | null>(
     null,
   );
+
+  const { mutate: createOrder } = useCreateOrderMutation();
 
   const subtotal = useMemo(
     () => selectedItems.reduce((sum, item) => sum + item.totalPrice, 0),
@@ -28,19 +44,45 @@ const PaymentScreen = () => {
   const total = subtotal + deliveryFee;
 
   const handleCheckout = () => {
-    if (!selectedAddress) {
-      alert("Please select address");
+    if (!selectedAddress || !name || !phone) {
+      showError("Please fill all required fields");
       return;
     }
 
-    console.log("PAY", {
-      selectedItems,
+    const body = {
+      userId: userId as string,
+      address: selectedAddress.name,
+      phone,
+      name,
       paymentMethod,
-      address: selectedAddress,
-    });
+      description,
+      shippingFee: deliveryFee,
+      products: selectedItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+    };
 
-    //   router.replace("/(protected)/(tabs)/order");
+    if (paymentMethod === "cod") {
+      createOrder(body, {
+        onSuccess: (data) => {
+          showSuccess(data.message);
+          router.replace("/(protected)/(tabs)/order");
+        },
+        onError: (err) => showError(err.message),
+      });
+      return;
+    }
+
+    router.push({
+      pathname: "/(protected)/pinPayment",
+      params: {
+        payload: JSON.stringify(body),
+        amount: total,
+      },
+    });
   };
+
   useEffect(() => {
     if (params.address) {
       setSelectedAddress({
@@ -64,7 +106,7 @@ const PaymentScreen = () => {
         <Text className="ml-3 text-lg font-bold">Payment</Text>
       </View>
       <FlatList
-        keyboardShouldPersistTaps="always"
+        keyboardShouldPersistTaps="handled"
         data={[{ key: "content" }]}
         keyExtractor={(item) => item.key}
         showsVerticalScrollIndicator={false}
@@ -117,6 +159,45 @@ const PaymentScreen = () => {
                   </View>
                 </View>
               )}
+            </View>
+
+            <View className="bg-white p-4 rounded-2xl mb-4">
+              <Text className="font-bold text-lg mb-3">Contact Info</Text>
+
+              <View className="mb-3">
+                <Text className="text-gray-500 mb-1">Name</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Enter your name"
+                  className="border border-gray-300 rounded-xl p-3"
+                />
+              </View>
+
+              <View className="mb-3">
+                <Text className="text-gray-500 mb-1">Phone</Text>
+                <TextInput
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="Enter your phone"
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#9CA3AF"
+                  className="border border-gray-300 rounded-xl p-3"
+                />
+              </View>
+
+              <View>
+                <Text className="text-gray-500 mb-1">Note</Text>
+                <TextInput
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Optional note for delivery"
+                  multiline
+                  numberOfLines={3}
+                  placeholderTextColor="#9CA3AF"
+                  className="border border-gray-300 rounded-xl p-3"
+                />
+              </View>
             </View>
 
             <View className="bg-white p-4 rounded-2xl mb-4">
@@ -195,7 +276,7 @@ const PaymentScreen = () => {
           onPress={handleCheckout}
           disabled={!selectedAddress}
           className={`py-4 rounded-2xl items-center ${
-            selectedAddress ? "bg-orange-500" : "bg-gray-300"
+            selectedAddress && name && phone ? "bg-orange-500" : "bg-gray-300"
           }`}
         >
           <Text className="text-white font-bold text-lg">

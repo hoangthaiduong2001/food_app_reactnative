@@ -7,6 +7,9 @@ import {
   GetOrderByUserIdResType,
   GetOrderDetailErrorType,
   GetOrderDetailResType,
+  OrderAgainBodyType,
+  OrderAgainErrorType,
+  OrderAgainResType,
   UpdateStatusOrderBodyType,
   UpdateStatusOrderErrorType,
   UpdateStatusOrderResType,
@@ -54,7 +57,7 @@ export const getOrderDetail = async (
   }
 };
 
-export const addOrderApi = async (
+export const createOrderApi = async (
   body: CreateOrderBodyType,
 ): Promise<CreateOrderResType> => {
   try {
@@ -82,6 +85,25 @@ export const updateStatusOrderApi = async (
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<UpdateStatusOrderErrorType>;
+    throw (
+      axiosError.response?.data ?? {
+        message: axiosError.message,
+      }
+    );
+  }
+};
+
+export const orderAgainApi = async (
+  body: OrderAgainBodyType,
+): Promise<OrderAgainResType> => {
+  try {
+    const response = await api.post<OrderAgainResType>(
+      "/orders/order-again",
+      body,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<OrderAgainErrorType>;
     throw (
       axiosError.response?.data ?? {
         message: axiosError.message,

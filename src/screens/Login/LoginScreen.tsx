@@ -41,7 +41,7 @@ const LoginScreen = () => {
         onSuccess: async (data) => {
           await saveTokens(data.accessToken, data.refreshToken, data.user);
           setToken(data.accessToken);
-          setUser(data.user.id, data.user.username);
+          setUser(data.user.id, data.user.username, data.user.hasWallet);
         },
         onError: (error) => {
           showError(error.message);
@@ -76,7 +76,7 @@ const LoginScreen = () => {
         }
 
         setToken(data.accessToken);
-        setUser(data.user.id, data.user.username);
+        setUser(data.user.id, data.user.username, data.user.hasWallet);
       },
       onError: (error) => {
         const field = error.field;

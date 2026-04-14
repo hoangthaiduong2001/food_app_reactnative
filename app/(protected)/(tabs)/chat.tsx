@@ -1,1 +1,1 @@
-export { default } from "@/screens/Chat/ChatScreen";
+export { default } from "@/screens/ChatList/ChatListScreen";
